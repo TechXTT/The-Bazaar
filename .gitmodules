@@ -1,0 +1,9 @@
+[submodule "bazaar-backend"]
+	path = bazaar-backend
+	url = https://github.com/TechXTT/bazaar-backend
+[submodule "bazaar-frontend"]
+	path = bazaar-frontend
+	url = https://github.com/TechXTT/bazaar-frontend
+[submodule "bazaar-contract"]
+	path = bazaar-contract
+	url = https://github.com/TechXTT/bazaar-contract
