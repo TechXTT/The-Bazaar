@@ -64,7 +64,7 @@ services:
       APP_BACKEND_URL: http://localhost:8000
       APP_FRONTEND_URL: http://localhost:3000
       ETH_URL: ws://hardhat:8545
-      CONTRACT_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      CONTRACT_ADDRESS: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
       JWT_DEV_KEY_FILE: /data/jwt-dev.pem
       STORAGE_DRIVER: local
       LOCAL_UPLOAD_DIR: uploads
@@ -85,12 +85,14 @@ services:
     environment:
       WATCHPACK_POLLING: "true"
       NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
-      NEXT_PUBLIC_CONTRACT_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      NEXT_PUBLIC_CONTRACT_ADDRESS: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+      NEXT_PUBLIC_USDC_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
       NEXT_PUBLIC_CHAIN_ID: "0x7a69"
       NEXT_PUBLIC_CHAIN_NAME: Hardhat Local
       NEXT_PUBLIC_RPC_URL: http://localhost:8545
       NEXT_PUBLIC_CDN_BASE_URL: http://localhost:8000/api/uploads
       NEXT_PUBLIC_ETHERSCAN_TX_BASE_URL: ""
+      NEXT_PUBLIC_ESCROW_RELEASE_DAYS: "14"
     ports:
       - "3000:3000"
     volumes:
