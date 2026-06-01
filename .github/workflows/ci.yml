@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bazaar-backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bazaar-backend/go.mod
+          cache-dependency-path: bazaar-backend/go.sum
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bazaar-frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: bazaar-frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm run build
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bazaar-contract
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bazaar-contract/package-lock.json
+      - run: npm ci
+      - run: npx hardhat compile
+      - run: npx hardhat test
+
+  abi-sync:
+    runs-on: ubuntu-latest
+    needs: [contract]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: bazaar-contract/package-lock.json
+      - run: npm ci
+        working-directory: bazaar-contract
+      - run: npx hardhat compile
+        working-directory: bazaar-contract
+      - run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const artifact = JSON.parse(fs.readFileSync('bazaar-contract/artifacts/contracts/Escrow.sol/Escrow.json', 'utf8'));
+          const abi = JSON.stringify(artifact.abi, null, '\t');
+          const backend = fs.readFileSync('bazaar-backend/Escrow.json', 'utf8').trim();
+          const frontend = fs.readFileSync('bazaar-frontend/escrow_abi.ts', 'utf8').trim();
+          if (backend !== abi) {
+            throw new Error('bazaar-backend/Escrow.json is out of sync');
+          }
+          if (frontend !== `export const ABI = ${abi};`) {
+            throw new Error('bazaar-frontend/escrow_abi.ts is out of sync');
+          }
+          NODE
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, contract]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # Build the frontend with the e2e wallet path enabled and bring the whole stack
+      # up (hardhat → contract deploy → postgres → backend → frontend).
+      - run: NEXT_PUBLIC_E2E=true docker compose up -d --wait
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install e2e deps
+        working-directory: bazaar-frontend/e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Wait for the app to be reachable
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/ >/dev/null; then echo "app up"; exit 0; fi
+            sleep 5
+          done
+          echo "app did not become reachable"; docker compose logs --tail=100; exit 1
+      - name: Run e2e
+        working-directory: bazaar-frontend/e2e
+        run: npm test
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose logs --tail=200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: bazaar-frontend/e2e/playwright-report/
+          retention-days: 7

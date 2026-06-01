@@ -94,6 +94,8 @@ services:
       NEXT_PUBLIC_ETHERSCAN_TX_BASE_URL: ""
       NEXT_PUBLIC_ESCROW_RELEASE_DAYS: "14"
       NEXT_PUBLIC_PLATFORM_FEE_BPS: "200"
+      # Set to "true" only when running the e2e suite (injected wallet). Leave unset/false otherwise.
+      NEXT_PUBLIC_E2E: "${NEXT_PUBLIC_E2E:-false}"
     ports:
       - "3000:3000"
     volumes:
