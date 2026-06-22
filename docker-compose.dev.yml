@@ -30,7 +30,8 @@ services:
       - hardhat-node-modules:/app/node_modules
 
   backend:
-    image: golang:1.22
+    # Aligned with bazaar-backend/go.mod (go 1.21) — DEP-2.
+    image: golang:1.21
     build: !reset null
     working_dir: /app
     command: go run ./...
