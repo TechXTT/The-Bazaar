@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bazaar — Improvement Roadmap</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3340;
+    --text:#e6edf3; --muted:#8b97a7; --faint:#5c6775;
+    --crit:#f85149; --high:#fb8500; --med:#e3b341; --low:#3fb950;
+    --contract:#a371f7; --backend:#58a6ff; --frontend:#2dd4bf; --infra:#f778ba;
+    --accent:#7c8cff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.5;padding:32px 28px 56px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1500px;margin:0 auto}
+  header h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  header .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .badge{display:inline-block;background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+    font-size:11px;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle}
+
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0 8px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;min-width:120px;flex:1}
+  .stat .n{font-size:22px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .stat.crit .n{color:var(--crit)} .stat.high .n{color:var(--high)}
+  .stat.med .n{color:var(--med)} .stat.low .n{color:var(--low)}
+
+  .legend{display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin:18px 0 26px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:12.5px;color:var(--muted)}
+  .legend .grp{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .legend .sep{width:1px;height:20px;background:var(--border)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .sq{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+  .board{display:flex;gap:16px;overflow-x:auto;padding-bottom:14px;align-items:stretch}
+  .col{background:var(--panel);border:1px solid var(--border);border-radius:14px;flex:1 1 0;min-width:255px;display:flex;flex-direction:column}
+  .col-h{padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+  .col-h .ph{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .col-h .ti{font-size:15px;font-weight:650;margin-top:3px}
+  .col-h .meta{font-size:11.5px;color:var(--faint);margin-top:5px}
+  .col-h.p0{border-top:3px solid var(--crit);border-radius:14px 14px 0 0}
+  .col-h.p1{border-top:3px solid var(--high)}
+  .col-h.p2{border-top:3px solid var(--med)}
+  .col-h.p3{border-top:3px solid var(--frontend)}
+  .col-h.p4{border-top:3px solid var(--low)}
+  .cards{padding:12px;display:flex;flex-direction:column;gap:9px;flex:1}
+
+  .card{background:var(--panel2);border:1px solid var(--border);border-left-width:3px;border-radius:9px;padding:9px 11px;position:relative}
+  .card .top{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+  .card .id{font-size:10.5px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .card .eff{margin-left:auto;font-size:10px;color:var(--faint);border:1px solid var(--border);border-radius:5px;padding:0 5px}
+  .card .tt{font-size:12.5px;color:var(--text);font-weight:520}
+  .card .ct{font-size:10px;margin-top:6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .card.b-crit{border-left-color:var(--crit)} .card.b-high{border-left-color:var(--high)}
+  .card.b-med{border-left-color:var(--med)} .card.b-low{border-left-color:var(--low)}
+
+  .note{margin-top:26px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 20px}
+  .note h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px}
+  .flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px}
+  .flow .step{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:7px 12px}
+  .flow .step b{color:var(--text)} .flow .step span{color:var(--muted)}
+  .flow .arr{color:var(--faint);font-size:16px}
+  .foot{color:var(--faint);font-size:11.5px;margin-top:26px;text-align:center}
+  .ct.contract{color:var(--contract)} .ct.backend{color:var(--backend)}
+  .ct.frontend{color:var(--frontend)} .ct.infra{color:var(--infra)} .ct.multi{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>The Bazaar — Improvement Roadmap <span class="badge">web3 escrow marketplace</span></h1>
+    <div class="sub">Sequenced from a deep line-level audit · 2026-06-22 · Contract + Backend + Frontend + Infra. Companion to <b>IMPROVEMENT_PLAN.md</b>.</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat crit"><div class="n">2</div><div class="l">Critical (launch-blocking)</div></div>
+    <div class="stat high"><div class="n">15</div><div class="l">High</div></div>
+    <div class="stat med"><div class="n">27</div><div class="l">Medium</div></div>
+    <div class="stat low"><div class="n">16</div><div class="l">Low</div></div>
+    <div class="stat"><div class="n">~60</div><div class="l">Total items · 5 phases</div></div>
+  </div>
+
+  <div class="legend">
+    <div class="grp">
+      <span><span class="dot" style="background:var(--crit)"></span>Critical</span>
+      <span><span class="dot" style="background:var(--high)"></span>High</span>
+      <span><span class="dot" style="background:var(--med)"></span>Medium</span>
+      <span><span class="dot" style="background:var(--low)"></span>Low</span>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <span><span class="sq" style="background:var(--contract)"></span>Contract</span>
+      <span><span class="sq" style="background:var(--backend)"></span>Backend</span>
+      <span><span class="sq" style="background:var(--frontend)"></span>Frontend</span>
+      <span><span class="sq" style="background:var(--infra)"></span>Infra / X-layer</span>
+    </div>
+    <div class="sep"></div>
+    <div class="grp"><span>Effort: <b style="color:var(--muted)">S</b> ≤½d · <b style="color:var(--muted)">M</b> 1–3d · <b style="color:var(--muted)">L</b> 1–2w</span></div>
+  </div>
+
+  <div class="board">
+    <!-- PHASE 0 -->
+    <div class="col">
+      <div class="col-h p0">
+        <div class="ph">Phase 0</div>
+        <div class="ti">Launch blockers — money safety</div>
+        <div class="meta">~1.5–2 weeks · do not handle real funds until green</div>
+      </div>
+      <div class="cards">
+        <div class="card b-crit"><div class="top"><span class="id">FE-3</span><span class="eff">M</span></div><div class="tt">Fix ETH/USDC price denomination (same number charged as either token)</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-crit"><div class="top"><span class="id">BE-1</span><span class="eff">S</span></div><div class="tt">Remove wildcard-CORS-with-credentials default</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">FE-1/2</span><span class="eff">L</span></div><div class="tt">Atomic, correlation-safe multi-order checkout</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">SC-1</span><span class="eff">M</span></div><div class="tt">Close dispute-griefing that blocks shipment / forces refunds</div><div class="ct contract">Contract</div></div>
+        <div class="card b-high"><div class="top"><span class="id">SC-2</span><span class="eff">S</span></div><div class="tt">Verify disputeID→order mapping in rule()</div><div class="ct contract">Contract</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-4</span><span class="eff">S</span></div><div class="tt">Wrap order creation in a DB transaction</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-2</span><span class="eff">S</span></div><div class="tt">Guard observer vs malformed logs (panic = crash)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-6</span><span class="eff">M</span></div><div class="tt">Add rate limiting (nonce DoS)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-5</span><span class="eff">M</span></div><div class="tt">Harden file uploads (path traversal + MIME)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">FE-4</span><span class="eff">M</span></div><div class="tt">Stop persisting JWT to localStorage</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">FE-5</span><span class="eff">S</span></div><div class="tt">Re-sync e2e wallet fixture ABI</div><div class="ct frontend">Frontend</div></div>
+      </div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="col">
+      <div class="col-h p1">
+        <div class="ph">Phase 1</div>
+        <div class="ti">Reliability & data integrity</div>
+        <div class="meta">~2–3 weeks</div>
+      </div>
+      <div class="cards">
+        <div class="card b-high"><div class="top"><span class="id">BE-3</span><span class="eff">M</span></div><div class="tt">Graceful shutdown + cancellable contexts</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-8</span><span class="eff">M</span></div><div class="tt">Stop swallowing observer DB errors; add replay</div><div class="ct backend">Backend</div></div>
+        <div class="card b-high"><div class="top"><span class="id">BE-7</span><span class="eff">M</span></div><div class="tt">De-duplicate divergent GORM models</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">XL-1</span><span class="eff">M</span></div><div class="tt">Single OrderStatus source of truth</div><div class="ct multi">Cross-layer</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-9</span><span class="eff">M</span></div><div class="tt">Move orders out of "disputed" on resolution</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-14</span><span class="eff">M</span></div><div class="tt">Versioned migrations (no destructive boot SQL)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-5</span><span class="eff">S</span></div><div class="tt">Ownable2Step + multisig/timelock admin</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-6</span><span class="eff">M</span></div><div class="tt">Pull-payment refunds (no brick-on-revert)</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-4</span><span class="eff">M</span></div><div class="tt">Emergency ERC-20/ETH rescue path</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-13</span><span class="eff">M</span></div><div class="tt">Fix soft-delete vs unique-wallet re-registration</div><div class="ct backend">Backend</div></div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="col">
+      <div class="col-h p2">
+        <div class="ph">Phase 2</div>
+        <div class="ti">Testing, hardening & observability</div>
+        <div class="meta">~3–4 weeks · engage external auditor</div>
+      </div>
+      <div class="cards">
+        <div class="card b-med"><div class="top"><span class="id">BE-11</span><span class="eff">L</span></div><div class="tt">Backend test suite (auth, IDOR, observer, math)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-tests</span><span class="eff">M</span></div><div class="tt">unpause, dispute/reclaim, rule(), settlement, appeals</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-15</span><span class="eff">M</span></div><div class="tt">Readiness probe, metrics, structured logs</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-16</span><span class="eff">M</span></div><div class="tt">JWT hardening (TTL, jti, revocation, refresh)</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-3</span><span class="eff">S</span></div><div class="tt">Per-order fee snapshot</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SC-7</span><span class="eff">S</span></div><div class="tt">Fee-on-transfer-safe accounting</div><div class="ct contract">Contract</div></div>
+        <div class="card b-med"><div class="top"><span class="id">CI-1</span><span class="eff">M</span></div><div class="tt">Lint + dep audit + secret scan + Slither in CI</div><div class="ct infra">Infra</div></div>
+        <div class="card b-med"><div class="top"><span class="id">DEP-1</span><span class="eff">M</span></div><div class="tt">Upgrade Next.js (CVEs); fix react dep spec</div><div class="ct infra">Infra</div></div>
+        <div class="card b-crit"><div class="top"><span class="id">AUDIT</span><span class="eff">L</span></div><div class="tt">Professional 3rd-party contract audit + fuzzing</div><div class="ct contract">Contract</div></div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="col">
+      <div class="col-h p3">
+        <div class="ph">Phase 3</div>
+        <div class="ti">Production infra & docs</div>
+        <div class="meta">~2–3 weeks</div>
+      </div>
+      <div class="cards">
+        <div class="card b-high"><div class="top"><span class="id">INFRA-1</span><span class="eff">L</span></div><div class="tt">Dockerfiles + CD; split dev/prod compose</div><div class="ct infra">Infra</div></div>
+        <div class="card b-high"><div class="top"><span class="id">INFRA-2</span><span class="eff">S</span></div><div class="tt">Commit untracked docs & config</div><div class="ct infra">Infra</div></div>
+        <div class="card b-med"><div class="top"><span class="id">INFRA-5</span><span class="eff">M</span></div><div class="tt">Compose secrets via env + healthchecks</div><div class="ct infra">Infra</div></div>
+        <div class="card b-med"><div class="top"><span class="id">INFRA-4</span><span class="eff">M</span></div><div class="tt">Merge feature branch → main; doc submodules</div><div class="ct infra">Infra</div></div>
+        <div class="card b-med"><div class="top"><span class="id">DOC-1</span><span class="eff">M</span></div><div class="tt">Real README + architecture/deploy/API docs</div><div class="ct infra">Infra</div></div>
+        <div class="card b-med"><div class="top"><span class="id">SEC-1</span><span class="eff">S</span></div><div class="tt">Sanitize example env; secrets out of compose</div><div class="ct infra">Infra</div></div>
+        <div class="card b-low"><div class="top"><span class="id">INFRA-3</span><span class="eff">S</span></div><div class="tt">Expand .gitignore; clean working tree</div><div class="ct infra">Infra</div></div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="col">
+      <div class="col-h p4">
+        <div class="ph">Phase 4</div>
+        <div class="ti">Performance, UX & polish</div>
+        <div class="meta">ongoing</div>
+      </div>
+      <div class="cards">
+        <div class="card b-med"><div class="top"><span class="id">FE-6</span><span class="eff">L</span></div><div class="tt">Server Components + per-route metadata (SEO)</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">FE-7</span><span class="eff">M</span></div><div class="tt">next/image migration; whitelist CDN</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-10</span><span class="eff">M</span></div><div class="tt">Order pagination</div><div class="ct backend">Backend</div></div>
+        <div class="card b-med"><div class="top"><span class="id">BE-18</span><span class="eff">L</span></div><div class="tt">Integer money types; reconcile totals</div><div class="ct backend">Backend</div></div>
+        <div class="card b-low"><div class="top"><span class="id">FE-9</span><span class="eff">S</span></div><div class="tt">Remove dead/corrupt dependencies</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-low"><div class="top"><span class="id">FE-14</span><span class="eff">M</span></div><div class="tt">Accessibility pass</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-low"><div class="top"><span class="id">SC-8/9/10/11</span><span class="eff">M</span></div><div class="tt">OZ primitives, custom errors, gas, view fns</div><div class="ct contract">Contract</div></div>
+        <div class="card b-low"><div class="top"><span class="id">BE-19/20/21</span><span class="eff">S</span></div><div class="tt">Worker pool, config validation, error bodies</div><div class="ct backend">Backend</div></div>
+        <div class="card b-low"><div class="top"><span class="id">FE-10/11/12/13</span><span class="eff">S</span></div><div class="tt">Dead code, PersistGate, typed API, id validation</div><div class="ct frontend">Frontend</div></div>
+        <div class="card b-low"><div class="top"><span class="id">DEP-2 · XL-2</span><span class="eff">S</span></div><div class="tt">One package manager; interface↔struct sync</div><div class="ct multi">Cross-layer</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>Critical path & key dependencies</h3>
+    <div class="flow">
+      <div class="step"><b>Phase 0</b> <span>money-safe core</span></div>
+      <span class="arr">→</span>
+      <div class="step"><b>Phase 1</b> <span>reliable + single data model</span></div>
+      <span class="arr">→</span>
+      <div class="step"><b>Phase 2</b> <span>tested + audited</span></div>
+      <span class="arr">→</span>
+      <div class="step"><b>Phase 3</b> <span>deployable</span></div>
+      <span class="arr">→</span>
+      <div class="step"><b>Mainnet</b> <span>real funds</span></div>
+    </div>
+    <div style="margin-top:14px;font-size:12.5px;color:var(--muted)">
+      <b style="color:var(--text)">Notable ordering constraints:</b>
+      &nbsp;• <b>FE-5</b> (fix e2e ABI) must precede trusting any e2e result for FE-1/2/3.
+      &nbsp;• <b>BE-7</b> (model dedup) should land before/with <b>XL-1</b> (enum source of truth) and <b>BE-9</b>.
+      &nbsp;• <b>SC-1/SC-2/SC-5/SC-6</b> all belong in the same contract redeploy, gated by the Phase-2 external audit before mainnet.
+      &nbsp;• <b>BE-14</b> (migrations) should precede schema-touching items (BE-13, model changes).
+      &nbsp;• Phase 4 items are independent and can be picked up opportunistically.
+    </div>
+  </div>
+
+  <div class="foot">Severity/effort and IDs map 1:1 to IMPROVEMENT_PLAN.md · ABI sync is already fixed & CI-enforced · most prior IMPROVEMENTS.md items resolved.</div>
+</div>
+</body>
+</html>
