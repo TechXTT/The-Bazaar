@@ -1,13 +1,20 @@
-.PHONY: local-up local-down local-logs local-reset
+.PHONY: local-up local-down local-logs local-reset prod-config
+
+# Dev stack: production-shaped base + dev override (source mounts, dev servers).
+DEV_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
 local-up:
-	docker compose up --build
+	$(DEV_COMPOSE) up --build
 
 local-down:
-	docker compose down
+	$(DEV_COMPOSE) down
 
 local-reset:
-	docker compose down -v
+	$(DEV_COMPOSE) down -v
 
 local-logs:
-	docker compose logs -f
+	$(DEV_COMPOSE) logs -f
+
+# Validate the production-shaped base compose (requires a populated .env).
+prod-config:
+	docker compose -f docker-compose.yml config -q

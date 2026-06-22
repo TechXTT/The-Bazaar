@@ -244,7 +244,11 @@ jobs:
           submodules: recursive
       # Build the frontend with the e2e wallet path enabled and bring the whole stack
       # up (hardhat → contract deploy → postgres → backend → frontend).
-      - run: NEXT_PUBLIC_E2E=true docker compose up -d --wait
+      # Use the dev override so the stack runs from source without the production
+      # Dockerfiles (INFRA-1, owned inside the submodules).
+      - run: |
+          NEXT_PUBLIC_E2E=true POSTGRES_PASSWORD=ci-secret \
+            docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -259,13 +263,13 @@ jobs:
             if curl -sf http://localhost:3000/ >/dev/null; then echo "app up"; exit 0; fi
             sleep 5
           done
-          echo "app did not become reachable"; docker compose logs --tail=100; exit 1
+          echo "app did not become reachable"; docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=100; exit 1
       - name: Run e2e
         working-directory: bazaar-frontend/e2e
         run: npm test
       - name: Stack logs on failure
         if: failure()
-        run: docker compose logs --tail=200
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=200
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

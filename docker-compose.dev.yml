@@ -1,0 +1,58 @@
+# Development override.
+#
+# Layer this on top of the production-shaped base compose for local development:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# (`make local-up` wires this for you.)
+#
+# It swaps the built images for stock language images, bind-mounts the submodule
+# source for hot reload, and runs each service in dev mode. This way no
+# per-component Dockerfile (INFRA-1) is required just to develop locally.
+
+services:
+  hardhat:
+    image: node:20
+    build: !reset null
+    working_dir: /app
+    command: sh -c "npm ci && npx hardhat node --hostname 0.0.0.0"
+    volumes:
+      - ./bazaar-contract:/app
+      - hardhat-node-modules:/app/node_modules
+
+  contract-deploy:
+    image: node:20
+    build: !reset null
+    working_dir: /app
+    command: sh -c "npx hardhat run scripts/deploy-local.ts --network docker"
+    volumes:
+      - ./bazaar-contract:/app
+      - hardhat-node-modules:/app/node_modules
+
+  backend:
+    image: golang:1.22
+    build: !reset null
+    working_dir: /app
+    command: go run ./...
+    # In dev the example env doubles as runtime config; production reads root .env.
+    env_file: !reset
+      - bazaar-backend/.env.example
+    volumes:
+      - ./bazaar-backend:/app
+      - backend-uploads:/app/uploads
+      - backend-data:/data
+
+  frontend:
+    image: node:20
+    build: !reset null
+    working_dir: /app
+    command: sh -c "corepack enable && corepack prepare pnpm@10.33.0 --activate && pnpm install && pnpm dev -- -H 0.0.0.0"
+    environment:
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./bazaar-frontend:/app
+      - frontend-node-modules:/app/node_modules
+
+volumes:
+  hardhat-node-modules:
+  frontend-node-modules:
