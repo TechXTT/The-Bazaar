@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # GitHub Actions used by the superproject CI workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci
+
+  # Backend Go modules.
+  - package-ecosystem: gomod
+    directory: /bazaar-backend
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - backend
+
+  # Frontend pnpm/npm dependencies.
+  - package-ecosystem: npm
+    directory: /bazaar-frontend
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - frontend
+
+  # Contract (Hardhat) npm dependencies.
+  - package-ecosystem: npm
+    directory: /bazaar-contract
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - contract
