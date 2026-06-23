@@ -130,8 +130,9 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 ## Autonomous improvements backlog (post-plan, user-authorized)
 
 To run after the current wave (each in the repo it owns, no collisions), beyond the strict plan:
-1. **Backend partials → complete:** BE-14 file-based `golang-migrate`; BE-15 Prometheus `/metrics`; BE-16 server-side refresh-token denylist/rotation.
+1. ☑ **Backend partials → complete:** BE-15 Prometheus `/metrics` `daf6d4e`; BE-16 refresh rotation+denylist `7562bb1`; BE-18 reconciliation groundwork `9cc85ac`. (BE-14 file migrations still left — unvalidatable without live DB.) Gate green, `go 1.21.11` kept, +`prometheus/client_golang v1.19.1`.
+   - ⚠ **Integration item (BE-16 ↔ FE-4):** backend now returns an opaque refresh token in the SIWE-verify body + `/api/auth/refresh` reads it from the body; FE-4 assumed a refresh *cookie*. Reconcile after Agent A: prefer backend also setting an httpOnly/Secure/SameSite refresh cookie with a body fallback (keeps FE-4's no-localStorage posture).
 2. **E2E correctness specs (plan testing item 3):** multi-item cart, partial-failure checkout (FE-1), USDC-vs-ETH pricing assertion (FE-3) — in `bazaar-frontend/e2e` after Agent A frees it.
 3. ☑ **Contract solvency/accounting tests** — `d6e3d32` solvency invariant across lifecycle, `256075c` pull-payment reverting-recipient edges, `6c0c806` rescue combined-floor. **96 passing** (was 82); logic untouched, ABI unchanged. (Foundry not present → stayed in Hardhat.)
-4. **Reconciliation:** observer reconciles DB `Total`/`Fee` against on-chain `Amount`/`feeBps` (groundwork for BE-18).
+4. ☑ **Reconciliation:** observer compares DB `Total`/`Fee` vs on-chain `amount`/`fee` on completion, warns + `bazaar_observer_reconcile_mismatch_total` on mismatch — `9cc85ac` (groundwork for BE-18).
 5. **DX:** `tygo` to generate TS types from Go structs (kills XL-2 drift permanently).
