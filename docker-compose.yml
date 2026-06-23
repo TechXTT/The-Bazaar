@@ -84,6 +84,11 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_SSLMODE: disable
       HTTP_ALLOWED_ORIGINS: ${HTTP_ALLOWED_ORIGINS:-http://localhost:3000}
+      # The frontend sends credentials (httpOnly refresh cookie, FE-4/BE-16), so
+      # CORS must return Access-Control-Allow-Credentials with a pinned origin.
+      HTTP_ALLOWED_CREDENTIALS: ${HTTP_ALLOWED_CREDENTIALS:-true}
+      HTTP_ALLOWED_HEADERS: ${HTTP_ALLOWED_HEADERS:-Content-Type,Authorization}
+      HTTP_ALLOWED_METHODS: ${HTTP_ALLOWED_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
       APP_BACKEND_URL: ${APP_BACKEND_URL:-http://localhost:8000}
       APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
       ETH_URL: ${ETH_URL:-ws://hardhat:8545}

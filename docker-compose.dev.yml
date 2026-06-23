@@ -39,7 +39,7 @@ services:
     # container runs from source (golang image, has wget), so override the probe.
     # Generous start_period: first boot does `go mod download` + compile.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/api/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 40
