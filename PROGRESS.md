@@ -47,7 +47,8 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 
 ### Pending integration (coordinator, after backend + F1 finish)
 - ☑ **ABI sync** — backend `Escrow.json` `ff4ede5` + frontend `escrow_abi.ts` `8f8ad9bd`, byte-identical to artifact (abi-sync logic verified locally). `OrderCreated` event unchanged → observer unaffected. FE-5 fixture `orders()` got `uint96 feeBps` (positional decode fix). FE/BE gates green.
-- ◐ **Pull-payment UX follow-up (SC-6)** — documented in DESIGN.md `6853843`; frontend "Withdraw" action in progress (Agent A).
+- ☑ **Pull-payment UX (SC-6)** — DESIGN.md `6853843`; frontend withdraw-banner (`getWithdrawable`/`withdraw()` + claim UI on Orders & Dispute detail) `c1292dbb`.
+- ☑ **BE-16 ↔ FE-4 refresh reconciliation** — backend sets httpOnly refresh cookie (`fdce917`); frontend correct path + withCredentials + server logout (`b93bcd44`). Gates green both sides.
 
 ### Backend (`bazaar-backend`)
 - ☑ BE-1 — Wildcard CORS + credentials (🔴 Critical, S) — `e97caf1` fail-fast config guard + test + sanitized env
@@ -104,8 +105,8 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 - ☐ DEP-1 — Upgrade Next off 13.5.4 + fix react dep (🟡 Med, M) — frontend
 - ◐ DEP-2 — One package manager + Go version align — root compose Go aligned (`79c0dfc`); submodule lockfiles/e2e-npm remain (submodule agents)
 - ☑ DOC-1 — Real README + architecture/deploy docs — `e619ad5` (README + docs/ARCHITECTURE/DEPLOY/CONTRIBUTING)
-- ◐ XL-1 — Single OrderStatus source + typed FE enum — backend single-source via BE-7 `b2aa662`; DESIGN.md updated `6853843`; FE typed union in progress (Agent A)
-- ◐ XL-2 — FE interfaces drift from Go structs — in progress (Agent A: IUser/IOrder field additions)
+- ☑ XL-1 — Single OrderStatus source + typed FE enum — backend single-source BE-7 `b2aa662`; DESIGN.md `6853843`; FE typed `OrderStatus` union + `toOrderStatus()` `c4967ee6`
+- ☑ XL-2 — FE interfaces drift from Go structs — `c4967ee6` (IUser += Address/LastLoginAt; IOrder += TxHash/ContractOrderID/Token/Fee/OnChainProductID/MetaEvidenceURI)
 
 ## Vault redesign screens
 
@@ -117,22 +118,18 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 ### Foundation / component library
 - ☑ Design tokens (CSS vars + Tailwind theme: vault-* colors, radii, Inter scale, shadows) — `d577b4aa`
 - ☑ Existing `components/ui/`: Button · Card · Badge · order-status-badge (6 states) · Input/Textarea/Field/Label · Spinner · Skeleton · empty-state
-- ☐ New component files: ProductCard · StoreCard · Navbar · Footer · SellerSidebar · escrow Stepper · segmented toggle · switch *(deferred — Figma)*
+- ☑ New component files: ProductCard · StoreCard · SellerSidebar · Footer · escrow Stepper · segmented toggle · switch · withdraw-banner — `3d01984c` (Navbar refreshed); frontend Dockerfile `f3ae9623`
 
-### Screens — ⊘ deferred (Figma MCP blocker); web3/route/redux logic preserved, FE-1…FE-15 done
-- ⊘ Home · Stores · Store detail · Product detail
-- ⊘ Cart · Checkout · Orders · Order detail/tracking
-- ⊘ Wallet connect (SIWE) · Seller dashboard · Seller orders
-- ⊘ Product editor · Account settings · Dispute detail
-- ⊘ Empty/loading/error states · Mobile/responsive (Home, Product, 404, skeleton)
-  *(Agent A is now executing these as token-approximation + Figma-via-node-id where reachable.)*
+### Screens — Figma MCP WORKS via explicit node ids (only get_variable_defs needed selection)
+Done (Agent A): Stores · Cart · Orders list · Order detail/tracking (Stepper) · Wallet connect/login · 404 — `c982cb71 13a691b5 a081df3f`
+- ◐ In progress (sweep agent, Figma node ids): Home · Store detail · Product detail · Checkout · Seller dashboard/orders/disputes · Dispute detail · Product editor · Account settings · mobile variants · loading/empty states
 
 ## Autonomous improvements backlog (post-plan, user-authorized)
 
 To run after the current wave (each in the repo it owns, no collisions), beyond the strict plan:
 1. ☑ **Backend partials → complete:** BE-15 Prometheus `/metrics` `daf6d4e`; BE-16 refresh rotation+denylist `7562bb1`; BE-18 reconciliation groundwork `9cc85ac`. (BE-14 file migrations still left — unvalidatable without live DB.) Gate green, `go 1.21.11` kept, +`prometheus/client_golang v1.19.1`.
    - ⚠ **Integration item (BE-16 ↔ FE-4):** backend now returns an opaque refresh token in the SIWE-verify body + `/api/auth/refresh` reads it from the body; FE-4 assumed a refresh *cookie*. Reconcile after Agent A: prefer backend also setting an httpOnly/Secure/SameSite refresh cookie with a body fallback (keeps FE-4's no-localStorage posture).
-2. **E2E correctness specs (plan testing item 3):** multi-item cart, partial-failure checkout (FE-1), USDC-vs-ETH pricing assertion (FE-3) — in `bazaar-frontend/e2e` after Agent A frees it.
+2. ◐ **E2E correctness specs (plan testing item 3):** multi-item cart, partial-failure checkout (FE-1), USDC-vs-ETH pricing (FE-3) — in progress (sweep agent).
 3. ☑ **Contract solvency/accounting tests** — `d6e3d32` solvency invariant across lifecycle, `256075c` pull-payment reverting-recipient edges, `6c0c806` rescue combined-floor. **96 passing** (was 82); logic untouched, ABI unchanged. (Foundry not present → stayed in Hardhat.)
 4. ☑ **Reconciliation:** observer compares DB `Total`/`Fee` vs on-chain `amount`/`fee` on completion, warns + `bazaar_observer_reconcile_mismatch_total` on mismatch — `9cc85ac` (groundwork for BE-18).
 5. **DX:** `tygo` to generate TS types from Go structs (kills XL-2 drift permanently).
