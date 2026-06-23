@@ -256,8 +256,16 @@ jobs:
       # up (hardhat → contract deploy → postgres → backend → frontend).
       # Use the dev override so the stack runs from source without the production
       # Dockerfiles (INFRA-1, owned inside the submodules).
+      # The production-shaped base compose reads `env_file: .env` and guards on a
+      # required POSTGRES_PASSWORD (INFRA-5). Write a throwaway CI .env so the stack
+      # composes; .env is gitignored so it never lands in the repo.
       - run: |
-          NEXT_PUBLIC_E2E=true POSTGRES_PASSWORD=ci-secret \
+          cat > .env <<'EOF'
+          POSTGRES_PASSWORD=ci-secret
+          POSTGRES_USER=bazaar
+          POSTGRES_DB=bazaar
+          EOF
+          NEXT_PUBLIC_E2E=true \
             docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
       - uses: actions/setup-node@v4
         with:

@@ -10,10 +10,15 @@ description = "Example env files and the local-dev JWT keypair are placeholders,
 paths = [
   '''(^|/)\.env\.example$''',
   '''(^|/)\.dev/jwt-dev\.pem$''',
+  # Build/run notes embed the public Figma file key (not a secret).
+  '''(^|/)CLAUDE_CODE_PROMPT\.md$''',
+  '''(^|/)LOCAL_RUN\.md$''',
 ]
-# Belt-and-suspenders: ignore obvious placeholder values that pattern-match a key.
+# Belt-and-suspenders: ignore obvious placeholder values that pattern-match a key,
+# plus the public Figma file key referenced in the docs.
 regexes = [
   '''<your-[a-z0-9-]+>''',
   '''0x\.\.\.''',
   '''xxxxx''',
+  '''EcYrT6j1UBpK8rNTojraWI''',
 ]

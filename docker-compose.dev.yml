@@ -30,11 +30,20 @@ services:
       - hardhat-node-modules:/app/node_modules
 
   backend:
-    # Aligned with bazaar-backend/go.mod (go 1.21) — DEP-2.
-    image: golang:1.21
+    # Matches the go.mod toolchain (go1.25.11); language level stays 1.21 (DEP-2).
+    image: golang:1.25
     build: !reset null
     working_dir: /app
     command: go run ./...
+    # The base image is distroless and probes via the compiled binary; the dev
+    # container runs from source (golang image, has wget), so override the probe.
+    # Generous start_period: first boot does `go mod download` + compile.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 90s
     # In dev the example env doubles as runtime config; production reads root .env.
     env_file: !reset
       - bazaar-backend/.env.example
