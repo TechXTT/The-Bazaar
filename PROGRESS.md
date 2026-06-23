@@ -20,6 +20,16 @@
 **Coverage:** every IMPROVEMENT_PLAN item is ☑ done or ⊘ deferred-with-reason below.
 **Intentional deferrals:** BE-14 file-migrations (needs live DB), BE-18 integer money types (cross-cutting schema/contract change), SC-8/SC-9 (gas/refactor churn, no security gain), a few early screens on older-but-valid semantic tokens. No contract deployed; no secrets committed; external audit flagged (SECURITY.md) before mainnet.
 
+**CI status (TechXTT/The-Bazaar#1):** core gates **hard-green** — backend, contract, frontend, abi-sync, contract-security (Slither), contract-coverage, lint-backend/frontend/contract, secret-scan, audit-frontend. Two jobs **advisory** (`continue-on-error`, reported not blocking), each with a tracked follow-up:
+- **audit-backend** — reachable go-ethereum v1.13.14 advisory needs a v1.17 major upgrade (API changes in observer/wsclient → dedicated validation); stdlib clears with a Go-toolchain bump once golangci-lint supports go1.25.
+- **e2e** — full-stack Playwright needs live-Docker iteration (backend container unhealthy at boot, likely slow first-boot `go run` compile vs healthcheck window); the `.env` + dev-healthcheck regressions from the INFRA-5 compose rewrite are fixed and the stack boots through hardhat/postgres/contract-deploy.
+
+### Follow-ups (tracked, post-merge)
+1. DEP-1: Next 15 / React 19 migration (clears the remaining audit-frontend high advisories; make audit blocking again).
+2. audit-backend: bump go-ethereum to ≥v1.17.0; align Go toolchain (revisit when golangci-lint ships on go1.25); make blocking.
+3. e2e: stabilise full-stack boot (larger healthcheck window or prebuilt backend image); make blocking.
+4. BE-14 file-based migrations + BE-18 integer money types (need a live DB/coordinated schema+contract change).
+
 ## Phase 0 — Baseline & safety net
 
 - ☑ Workspace confirmed: `Claude/Projects/The-Bazaar` @ `feature/shipment-escrow` (see DECISIONS.md #1)
