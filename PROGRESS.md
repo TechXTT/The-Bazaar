@@ -93,7 +93,7 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 - ☑ FE-15 — Remove client-set CORS request headers — `ed26cb8d`
 
 ### Infra / CI / cross-layer (`root`)
-- ◐ INFRA-1 — Prod Dockerfiles + CD + split compose — split compose `86543c6`; CD workflow `59b2daf` (build+push GHCR on tags); per-component Dockerfiles in progress (Agent B: backend+contract; Agent A: frontend)
+- ◐ INFRA-1 — Prod Dockerfiles + CD + split compose — split compose `86543c6`; CD `59b2daf`; backend Dockerfile `e3b26a3` (distroless) + contract `932f1f6`; distroless healthcheck fix (backend `414dc27` -healthcheck flag, compose `23bc794`); frontend Dockerfile pending (Agent A)
 - ☑ INFRA-2 — Commit untracked docs (Phase 0 `docs:` commit + `62b97b9`)
 - ☑ INFRA-3 — Expand `.gitignore`, clean tree — `62b97b9`
 - ☐ INFRA-4 — Merge to `main` across repos (🟡 Med, M) — *requires shared-branch push; see DECISIONS*
