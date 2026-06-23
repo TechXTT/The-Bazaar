@@ -159,3 +159,16 @@ To run after the current wave (each in the repo it owns, no collisions), beyond 
 3. ☑ **Contract solvency/accounting tests** — `d6e3d32` solvency invariant across lifecycle, `256075c` pull-payment reverting-recipient edges, `6c0c806` rescue combined-floor. **96 passing** (was 82); logic untouched, ABI unchanged. (Foundry not present → stayed in Hardhat.)
 4. ☑ **Reconciliation:** observer compares DB `Total`/`Fee` vs on-chain `amount`/`fee` on completion, warns + `bazaar_observer_reconcile_mismatch_total` on mismatch — `9cc85ac` (groundwork for BE-18).
 5. **DX:** `tygo` to generate TS types from Go structs (kills XL-2 drift permanently).
+
+## VISUAL_PUNCHLIST — legacy → vault token migration (complete)
+All P1→P4 legacy "Violet-on-Slate" tokens migrated to canonical `vault-*`; legacy
+keys removed from `tailwind.config.ts`; `tsc`/`lint`/`build` green; changes are
+className-only (e2e selectors unaffected; specs compile; pricing spec 5/5).
+- ☑ P1 Order detail `048cbaa5` · Stores `600f537c` · Orders list `a334e3e8`
+- ☑ P2 search + info-page `0889e967` (stepper/product-card/switch/empty-state were already on-spec)
+- ☑ P3 about/contact/faq/terms/privacy `11613f66`
+- ☑ P4 network-banner/image/layout/auth `201cb465`
+- ☑ Final cleanup: globals.css `@apply` + remove legacy config keys `867f0a5f`
+- Note: official DoD grep still reports 6 hits, all the **canonical** `vault-border-strong`
+  (the grep's `border-(subtle|strong)` substring-matches it). Zero real legacy — the
+  legacy-specific grep `border-border-(subtle|strong)` returns nothing. See DECISIONS #12.

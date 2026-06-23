@@ -122,3 +122,25 @@ config gaps, not core build/test breakage. Fixes:
 - No contract deployment/upgrade to any network; contract work is code + tests only.
   A `SECURITY.md` note (external audit required before mainnet) will be added in Phase 4.
 - No secret rotation/commits; example env will be sanitized (SEC-1) but no real secrets touched.
+
+## 12. VISUAL_PUNCHLIST executed — legacy tokens fully removed; DoD-grep over-match documented
+Migrated every legacy "Violet-on-Slate" token to canonical `vault-*` across P1→P4
+(Order detail/Stores/Orders, search/info-page, the 5 static pages, network-banner/
+image/layout/auth), migrated the `@apply` carousel rules in `globals.css`, and
+removed all legacy color + boxShadow keys from `tailwind.config.ts`. `tsc`, `lint`,
+`build` green; changes are className-only (e2e selectors are text/role-based and
+unaffected; specs compile, the stack-free pricing spec passes).
+
+**Known DoD-grep over-match (reasonable call):** the DoD grep segment
+`border-(subtle|strong)` substring-matches the **canonical** vault token
+`border-vault-border-strong` (and `bg-vault-border-strong`), so the literal grep
+still reports 6 hits even though **zero legacy remains**. Proof: the legacy-specific
+grep `border-border-(subtle|strong)` returns nothing, and a full token sweep finds
+no non-`vault` legacy class. I deliberately did **not** rename the canonical
+`vault.border-strong` token (to e.g. camelCase) just to dodge the substring match —
+that would break the vault tokens' kebab-case convention and churn on-spec files for
+no design benefit. **Recommendation:** tighten the DoD grep to
+`border-border-(subtle|strong)` (the legacy double-`border-` form) so it targets only
+legacy usage. The 4 components the punch-list listed as P2 "leftovers"
+(stepper/product-card/switch/empty-state) were already fully on-spec — their only
+"hits" were this same `vault-border-strong` substring.
