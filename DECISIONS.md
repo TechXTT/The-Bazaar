@@ -144,3 +144,36 @@ no design benefit. **Recommendation:** tighten the DoD grep to
 legacy usage. The 4 components the punch-list listed as P2 "leftovers"
 (stepper/product-card/switch/empty-state) were already fully on-spec — their only
 "hits" were this same `vault-border-strong` substring.
+
+## 13. Seller-context auth-session bug fixed + full e2e green (fix/auth-session)
+Diagnosed with captured browser console + network on the seller login. Root cause:
+the axios 401 interceptor logged out on ANY 401 with no refresh attempt, so a
+transient 401 (FE-4 in-memory-JWT gap on navigation, or an expired 1h access
+token) dropped the session; concurrent requests caused the 401 *burst*. The refresh
+cookie itself was correct (Path=/api/auth, SameSite=Lax, withCredentials).
+
+**Fix:** single-flight refresh + retry-once on 401 (concurrent 401s share one
+/api/auth/refresh; logout only if the refresh fails); bootstrapAuth shares the same
+in-flight promise (refresh token is single-use/rotating, BE-16).
+
+**Bugs that surfaced once login persisted** (each blocked the next e2e layer):
+1. Dev-compose: stale postgres-data volume (DB auth fail) + healthcheck probed
+   /health not /api/health + backend CORS env missing HTTP_ALLOWED_CREDENTIALS
+   (no Access-Control-Allow-Credentials for the credentialed frontend). [root, df6f4d8]
+2. `_getProducts` set a bogus Access-Control-Expose-Headers REQUEST header →
+   failed the credentialed preflight → store page never loaded products.
+3. next.config images hardcoded https/no-port → next/image rejected dev images
+   (http://localhost:8000) → seller store page crashed.
+4. Backend `Order.Fee` (string) on a numeric column → "" = invalid numeric (22P02)
+   → order creation 500. Seed "0" placeholder. [backend PR #24]
+5. E2E: contract is ship-gated (SC-1) — added markShipped before claim/dispute;
+   implemented the injected wallet's send-rejection (was never wired) for the
+   partial-failure spec.
+
+**Fresh-chain finding:** the test-02 exact-payout assertion failed only because 8
+prior e2e runs accumulated on the never-reset Hardhat chain; on a fresh stack
+(`down -v` + up) **all 11 specs pass** — login, lifecycle (list→buy→ship→claim),
+dispute/refund, multi-item, partial-failure, pricing.
+
+**Branches:** frontend `fix/auth-session` → PR #13 (base feat/vault-redesign, separate
+from styling PR #12); backend `fix/auth-session` → PR #24 (base fix/improvement-plan).
