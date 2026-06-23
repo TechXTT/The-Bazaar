@@ -98,13 +98,9 @@ services:
       - backend-uploads:/app/uploads
       - backend-data:/data
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "-qO-",
-          "http://localhost:8000/health"
-        ]
+      # The backend image is distroless (no shell/wget), so probe via the app
+      # binary's own -healthcheck flag, which hits /health and exits 0/1.
+      test: ["CMD", "/app/bazaar-backend", "-healthcheck"]
       interval: 5s
       timeout: 5s
       retries: 20
