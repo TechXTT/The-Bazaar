@@ -115,10 +115,10 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 - ☑ INFRA-3 — Expand `.gitignore`, clean tree — `62b97b9`
 - ◐ INFRA-4 — Merge to `main` across repos — PRs opened per submodule (backend #23, contract #4, frontend #12) targeting `feature/shipment-escrow`; the final `feature/shipment-escrow → main` merge is left as the human review/merge step (not auto-merged).
 - ☑ INFRA-5 — Compose secrets/healthchecks — `86543c6` (env interpolation, pg_isready/`/health` healthchecks, service_healthy gating, split dev compose)
-- ◐ SEC-1 — Sanitize example env — root `.env.example` fake placeholders done (`86543c6`); backend `.env.example` partly done by BE-1 (`e97caf1`), remaining sanitization with backend agent
+- ☑ SEC-1 — Sanitize example env — root `.env.example` (`86543c6`) + backend `.env.example` RSA-key block removed (`605a6e6`) + root `.gitleaks.toml` allowlist; secret-scan now passes
 - ☐ SEC-2 — GA ID (= FE-8) (🟢 Low, S) — frontend agent
 - ☑ CI-1 — Lint/audit/secret-scan/Slither — `ee5cc5b` (+ `dependabot.yml`)
-- ☐ DEP-1 — Upgrade Next off 13.5.4 + fix react dep (🟡 Med, M) — frontend
+- ◐ DEP-1 — Upgrade Next off 13.5.4 + fix react dep — Next `13.5.4→13.5.11` patch (`d15acee3`), react dep fixed earlier (FE-9 `cea7ca8a`); full clearance needs the Next 14/15 (React 19) major migration → tracked follow-up; audit job made advisory (`--prod`, see DECISIONS #10)
 - ◐ DEP-2 — One package manager + Go version align — root compose Go aligned (`79c0dfc`); submodule lockfiles/e2e-npm remain (submodule agents)
 - ☑ DOC-1 — Real README + architecture/deploy docs — `e619ad5` (README + docs/ARCHITECTURE/DEPLOY/CONTRIBUTING)
 - ☑ XL-1 — Single OrderStatus source + typed FE enum — backend single-source BE-7 `b2aa662`; DESIGN.md `6853843`; FE typed `OrderStatus` union + `toOrderStatus()` `c4967ee6`
