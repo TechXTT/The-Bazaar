@@ -132,6 +132,6 @@ Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI a
 To run after the current wave (each in the repo it owns, no collisions), beyond the strict plan:
 1. **Backend partials → complete:** BE-14 file-based `golang-migrate`; BE-15 Prometheus `/metrics`; BE-16 server-side refresh-token denylist/rotation.
 2. **E2E correctness specs (plan testing item 3):** multi-item cart, partial-failure checkout (FE-1), USDC-vs-ETH pricing assertion (FE-3) — in `bazaar-frontend/e2e` after Agent A frees it.
-3. **Contract fuzzing harness (pre-mainnet):** Foundry/Echidna invariants on escrow + dispute accounting (obligation floor `escrowedFunds+heldDeposits+totalWithdrawable` never exceeds balance).
+3. ☑ **Contract solvency/accounting tests** — `d6e3d32` solvency invariant across lifecycle, `256075c` pull-payment reverting-recipient edges, `6c0c806` rescue combined-floor. **96 passing** (was 82); logic untouched, ABI unchanged. (Foundry not present → stayed in Hardhat.)
 4. **Reconciliation:** observer reconciles DB `Total`/`Fee` against on-chain `Amount`/`feeBps` (groundwork for BE-18).
 5. **DX:** `tygo` to generate TS types from Go structs (kills XL-2 drift permanently).
