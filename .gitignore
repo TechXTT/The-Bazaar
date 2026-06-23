@@ -1,0 +1,22 @@
+# --- OS / editor junk ---
+.DS_Store
+**/.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Local agent / tooling state ---
+.claude/
+.playwright-mcp/
+graphify-out/
+
+# --- Secrets / local env (never commit real secrets) ---
+.env
+.env.*
+!.env.example
+
+# --- Root-level scratch captures (redesign / audit screenshots) ---
+/*.png
+/*.jpg
+/*.jpeg
+/*.svg

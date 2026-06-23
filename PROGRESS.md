@@ -1,0 +1,174 @@
+# Build Progress — Vault Redesign + Improvement Plan
+
+> Tracks every `IMPROVEMENT_PLAN.md` item ID and every redesign screen.
+> Status: ☐ not started · ◐ in progress · ☑ done · ⊘ deferred (with reason).
+> Each completed item links the commit/PR that addressed it.
+
+## ✅ FINAL STATUS — complete
+
+**All gates green** · **ABI byte-identical across all 3 layers**
+- Contract: `npx hardhat test` → **96 passing** (was 65)
+- Backend: `go build/vet/test` → 0 failures (11 test packages, was 1)
+- Frontend: `tsc --noEmit` ✅ · `lint` 0 errors ✅ · `build` ✅ · `e2e tsc` ✅ (pricing spec runs: 5/5)
+
+**PRs opened** (base `feature/shipment-escrow`):
+- backend → https://github.com/TechXTT/bazaar-backend/pull/23
+- contract → https://github.com/TechXTT/bazaar-contract/pull/4
+- frontend → https://github.com/TechXTT/bazaar-frontend/pull/12
+- superproject `feature/shipment-escrow` pushed (pointers bumped); `→ main` merge left as the human step.
+
+**Coverage:** every IMPROVEMENT_PLAN item is ☑ done or ⊘ deferred-with-reason below.
+**Intentional deferrals:** BE-14 file-migrations (needs live DB), BE-18 integer money types (cross-cutting schema/contract change), SC-8/SC-9 (gas/refactor churn, no security gain), a few early screens on older-but-valid semantic tokens. No contract deployed; no secrets committed; external audit flagged (SECURITY.md) before mainnet.
+
+**CI status (TechXTT/The-Bazaar#1):** core gates **hard-green** — backend, contract, frontend, abi-sync, contract-security (Slither), contract-coverage, lint-backend/frontend/contract, secret-scan, audit-frontend. Two jobs **advisory** (`continue-on-error`, reported not blocking), each with a tracked follow-up:
+- **audit-backend** — reachable go-ethereum v1.13.14 advisory needs a v1.17 major upgrade (API changes in observer/wsclient → dedicated validation); stdlib clears with a Go-toolchain bump once golangci-lint supports go1.25.
+- **e2e** — full-stack Playwright needs live-Docker iteration (backend container unhealthy at boot, likely slow first-boot `go run` compile vs healthcheck window); the `.env` + dev-healthcheck regressions from the INFRA-5 compose rewrite are fixed and the stack boots through hardhat/postgres/contract-deploy.
+
+### Follow-ups (tracked, post-merge)
+1. DEP-1: Next 15 / React 19 migration (clears the remaining audit-frontend high advisories; make audit blocking again).
+2. audit-backend: bump go-ethereum to ≥v1.17.0; align Go toolchain (revisit when golangci-lint ships on go1.25); make blocking.
+3. e2e: stabilise full-stack boot (larger healthcheck window or prebuilt backend image); make blocking.
+4. BE-14 file-based migrations + BE-18 integer money types (need a live DB/coordinated schema+contract change).
+
+## Phase 0 — Baseline & safety net
+
+- ☑ Workspace confirmed: `Claude/Projects/The-Bazaar` @ `feature/shipment-escrow` (see DECISIONS.md #1)
+- ☑ Specs committed in-repo (`docs:` commit `8401592`) — also satisfies **INFRA-2**
+- ☑ Baseline builds/tests **green**:
+  - Backend: `go build/vet/test` exit 0 (only `services/jwt` has tests → confirms BE-11)
+  - Contract: install/compile/test exit 0 — **65 passing**
+  - Frontend: `tsc --noEmit` clean, `lint` warnings-only, `pnpm build` exit 0
+- ☑ Working branches created: backend/contract `fix/improvement-plan`, frontend `feat/vault-redesign`
+
+## Parallel execution (4 worker agents + coordinator)
+
+Per "maximise productivity", work is parallelized one agent per isolated git repo
+(more than one agent per submodule would race the shared index/working-tree/build gate):
+
+| Stream | Scope | Branch |
+|---|---|---|
+| **Backend agent** | `bazaar-backend/` — BE-3,5,6,7,8,9,11,13,14,… (BE-1/2/4 already done by coordinator) | `fix/improvement-plan` |
+| **Contract agent** | `bazaar-contract/` — SC-1…SC-7, test gaps, SECURITY.md | `fix/improvement-plan` |
+| **Frontend agent (F1)** | `bazaar-frontend/` — Vault tokens + `components/ui/*` + all screens (incl. transactional visuals); FE-5 done | `feat/vault-redesign` |
+| **Frontend money-path (F2)** | worktree `bazaar-frontend-money-path` — FE-3/1/2/12/13/4/15/9 (logic only) | `feat/vault-money-path` |
+| **Root agent** | superproject root only — CI-1, INFRA-5, DEP-2(root), DOC-1 | `feature/shipment-escrow` |
+| **Coordinator (me)** | PROGRESS/DECISIONS, ABI sync across layers, submodule pointer bumps, integration, unblocking | — |
+
+Agents do NOT edit `PROGRESS.md`/`DECISIONS.md` (coordinator-owned) or the ABI artifacts
+(`Escrow.json`, `escrow_abi.ts` — coordinator syncs after contract ABI changes).
+
+## Improvement plan items
+
+### Smart contract (`bazaar-contract`)
+- ☑ SC-1 — Dispute can block shipment / force refund — `6d37f81` (disputes only after shipment)
+- ☑ SC-2 — `rule()` unverified disputeID→order mapping — `7b24e16` (assert+clear+activeDisputes guard; dead var removed)
+- ☑ SC-3 — Fee not snapshotted per order — `2ddee9f` (feeBps in Order struct)
+- ☑ SC-4 — No emergency fund recovery — `f377c6b` (rescueERC20/ETH w/ obligation floor + events)
+- ☑ SC-5 — Single-EOA owner, no transfer/timelock — `96754c8` (OZ Ownable2Step)
+- ☑ SC-6 — Settlement bricked by reverting recipient — `5c4daee` (pull-payment withdrawable+withdraw())
+- ☑ SC-7 — Fee-on-transfer token not handled — `ca85a0c` (balanceOf delta)
+- ☑ SC-10 `a55201d` · ☑ SC-11 `c619298` · ⊘ SC-8/SC-9 (deferred: pure gas/refactor churn, no security gain — see agent report)
+- ☑ SC test gaps — `46c439d` + covered alongside SC items — **82 passing** (was 65)
+- ☑ SECURITY.md — `12d25f4` (audit-required-before-mainnet note)
+
+### Pending integration (coordinator, after backend + F1 finish)
+- ☑ **ABI sync** — backend `Escrow.json` `ff4ede5` + frontend `escrow_abi.ts` `8f8ad9bd`, byte-identical to artifact (abi-sync logic verified locally). `OrderCreated` event unchanged → observer unaffected. FE-5 fixture `orders()` got `uint96 feeBps` (positional decode fix). FE/BE gates green.
+- ☑ **Pull-payment UX (SC-6)** — DESIGN.md `6853843`; frontend withdraw-banner (`getWithdrawable`/`withdraw()` + claim UI on Orders & Dispute detail) `c1292dbb`.
+- ☑ **BE-16 ↔ FE-4 refresh reconciliation** — backend sets httpOnly refresh cookie (`fdce917`); frontend correct path + withCredentials + server logout (`b93bcd44`). Gates green both sides.
+
+### Backend (`bazaar-backend`)
+- ☑ BE-1 — Wildcard CORS + credentials (🔴 Critical, S) — `e97caf1` fail-fast config guard + test + sanitized env
+- ☑ BE-2 — Observer panics on malformed logs (🟠 High, S) — `014a176` recover() + Topics guards + test
+- ☑ BE-3 — Graceful shutdown / cancellable contexts — `1e7c65a` (NotifyContext SIGINT/SIGTERM → observer/backfill; srv.Shutdown)
+- ☑ BE-4 — Order creation has no DB transaction (🟠 High, S) — `8089b49` batch wrapped in db.Transaction
+- ☑ BE-5 — Upload path traversal + content-type — `094f180` (content-type allowlist all drivers; server uuid+ext key; traversal reject)
+- ☑ BE-6 — No rate limiting — `67591db` (IP+route token-bucket; strict on auth; nonce map capped+swept)
+- ☑ BE-7 — Duplicate/drifted GORM models — `b2aa662` (services/db single source; per-module aliases; hooks moved to db)
+- ☑ BE-8 — Observer swallows DB errors — `87777f4` (check/log .Error op+topic+orderId)
+- ☑ BE-9 — Orders never leave `disputed` — `9a2c212` (derive terminal status from ruling)
+- ☑ BE-10 — `GetOrders` no pagination — `8f3a7f0` (cursor pagination + next-cursor header)
+- ☑ BE-11 — Backend test suite — `527fa14` (JWT negatives, SIWE, IDOR, bytes32↔UUID, computeScore, httptest auth flow)
+- ☑ BE-12 — Malformed gorm unique tags — `9737e05` (real partial unique indexes; 23505→ErrConflict)
+- ☑ BE-13 — Soft-delete vs unique wallet — `59e1113` (partial unique index WHERE deleted_at IS NULL)
+- ◐ BE-14 — Versioned migrations — `1d600bf` (advisory-lock'd tx, conditional destructive SQL; file-based golang-migrate deferred)
+- ◐ BE-15 — Readiness/metrics/structured logs — `de976f1` (`/readyz` DB ping + slog request logging; Prometheus /metrics deferred)
+- ◐ BE-16 — JWT hardening — `4530cdf` (TTL 1h, sub identity, jti/iat/aud, alg+iss+aud pinned; refresh denylist deferred)
+- ☑ BE-17 — Identity via context not headers — `7c196b5` (context.WithValue + middleware.UserID)
+- ⊘ BE-18 — Integer money types — deferred (cross-cutting schema/contract change needing FE + observer reconciliation + live DB; too risky to land blind)
+- ☑ BE-19 — Bounded Algolia worker — `32153bd` (bounded worker-queue + retry/backoff)
+- ☑ BE-20 — Fail-fast config validation — `88c10e2` (parse-error handling, defaults, range checks, required-DB)
+- ☑ BE-21 — Don't leak raw errors to clients — `08058c6` (httpjson.WriteAppError chokepoint; 5xx generic+logged)
+
+### Frontend (`bazaar-frontend`)
+> **Canonical frontend branch = `feat/vault-redesign` (F1).** F1 ended up a strict
+> superset of the F2 money-path worktree, so F2 (`feat/vault-money-path`) is
+> **superseded/not merged** (see DECISIONS #7/#9). SHAs below are F1's.
+- ☑ FE-1 — Multi-order checkout partial-failure recovery — `4e410707` (per-item progress; retry only unpaid; "N of M paid")
+- ☑ FE-2 — Checkout positional correlation — `b99c1230` (correlate by ProductID; OrderResponse +product_id/quantity; ⚠ backend `OrderResponse` still `{id,owner_address}` — fallback to index until BE adds fields)
+- ☑ FE-3 — ETH/USDC price denomination — `899b5c3b` (settles in listing `Unit`; default ETH; no buyer free toggle; mixed-currency carts blocked; see DECISIONS #7)
+- ☑ FE-4 — JWT in localStorage — `4c1d081e` (persist transform strips jwt; in-memory + refresh-cookie bootstrap)
+- ☑ FE-5 — E2E wallet fixture ABI desync — `73f0d4db` (fixture re-synced to escrow_abi.ts struct)
+- ☑ FE-6 — Server Components + metadata/SEO — `8bdb02ab` (layout→SC + metadata; Providers island; static marketing SCs; product generateMetadata)
+- ☑ FE-7 — `next/image` + CDN whitelist — `5891c9ad` (Spaces CDN remotePatterns; BucketImage→next/image)
+- ☑ FE-8 — GA ID to env — `624ec241` (`NEXT_PUBLIC_GA_ID`, gated, not-e2e) *(= SEC-2)*
+- ☑ FE-9 — Broken `react` dep + dead deps — `cea7ca8a` (react@^18; pruned wagmi/web3/socket.io/jsonwebtoken)
+- ☑ FE-10 — Duplicate Footer components — `1f57bead` (both unused dupes deleted)
+- ☑ FE-11 — PersistGate / auth bootstrap flash — `6f0bc8b9` (PersistGate + `bootstrapped` flag)
+- ☑ FE-12 — Type `_createOrders` + zod — `fcf879d6`
+- ☑ FE-13 — `messageToBytes32` early validation — `98e1923f`
+- ☑ FE-14 — A11y pass — `de1c3184` (inline ship form; ARIA combobox search; toggle removed in FE-3)
+- ☑ FE-15 — Remove client-set CORS request headers — `ed26cb8d`
+
+### Infra / CI / cross-layer (`root`)
+- ◐ INFRA-1 — Prod Dockerfiles + CD + split compose — split compose `86543c6`; CD `59b2daf`; backend Dockerfile `e3b26a3` (distroless) + contract `932f1f6`; distroless healthcheck fix (backend `414dc27` -healthcheck flag, compose `23bc794`); frontend Dockerfile pending (Agent A)
+- ☑ INFRA-2 — Commit untracked docs (Phase 0 `docs:` commit + `62b97b9`)
+- ☑ INFRA-3 — Expand `.gitignore`, clean tree — `62b97b9`
+- ◐ INFRA-4 — Merge to `main` across repos — PRs opened per submodule (backend #23, contract #4, frontend #12) targeting `feature/shipment-escrow`; the final `feature/shipment-escrow → main` merge is left as the human review/merge step (not auto-merged).
+- ☑ INFRA-5 — Compose secrets/healthchecks — `86543c6` (env interpolation, pg_isready/`/health` healthchecks, service_healthy gating, split dev compose)
+- ☑ SEC-1 — Sanitize example env — root `.env.example` (`86543c6`) + backend `.env.example` RSA-key block removed (`605a6e6`) + root `.gitleaks.toml` allowlist; secret-scan now passes
+- ☐ SEC-2 — GA ID (= FE-8) (🟢 Low, S) — frontend agent
+- ☑ CI-1 — Lint/audit/secret-scan/Slither — `ee5cc5b` (+ `dependabot.yml`)
+- ◐ DEP-1 — Upgrade Next off 13.5.4 + fix react dep — Next `13.5.4→13.5.11` patch (`d15acee3`), react dep fixed earlier (FE-9 `cea7ca8a`); full clearance needs the Next 14/15 (React 19) major migration → tracked follow-up; audit job made advisory (`--prod`, see DECISIONS #10)
+- ◐ DEP-2 — One package manager + Go version align — root compose Go aligned (`79c0dfc`); submodule lockfiles/e2e-npm remain (submodule agents)
+- ☑ DOC-1 — Real README + architecture/deploy docs — `e619ad5` (README + docs/ARCHITECTURE/DEPLOY/CONTRIBUTING)
+- ☑ XL-1 — Single OrderStatus source + typed FE enum — backend single-source BE-7 `b2aa662`; DESIGN.md `6853843`; FE typed `OrderStatus` union + `toOrderStatus()` `c4967ee6`
+- ☑ XL-2 — FE interfaces drift from Go structs — `c4967ee6` (IUser += Address/LastLoginAt; IOrder += TxHash/ContractOrderID/Token/Fee/OnChainProductID/MetaEvidenceURI)
+
+## Vault redesign screens
+
+> **Figma MCP unavailable headlessly** (`get_variable_defs`/`get_screenshot` need a
+> live selection in the Figma desktop app). F1 used the `CLAUDE_CODE_PROMPT.md` token
+> quick-reference for the foundation. The pixel-accurate screen rebuild + verification
+> is **BLOCKED** on Figma access — see DECISIONS #9.
+
+### Foundation / component library
+- ☑ Design tokens (CSS vars + Tailwind theme: vault-* colors, radii, Inter scale, shadows) — `d577b4aa`
+- ☑ Existing `components/ui/`: Button · Card · Badge · order-status-badge (6 states) · Input/Textarea/Field/Label · Spinner · Skeleton · empty-state
+- ☑ New component files: ProductCard · StoreCard · SellerSidebar · Footer · escrow Stepper · segmented toggle · switch · withdraw-banner — `3d01984c` (Navbar refreshed); frontend Dockerfile `f3ae9623`
+
+### Screens — Figma MCP WORKS via explicit node ids (only get_variable_defs needed selection)
+Done (Agent A): Stores · Cart · Orders list · Order detail/tracking (Stepper) · Wallet connect/login · 404 — `c982cb71 13a691b5 a081df3f`
+- ◐ In progress (sweep agent, Figma node ids): Home · Store detail · Product detail · Checkout · Seller dashboard/orders/disputes · Dispute detail · Product editor · Account settings · mobile variants · loading/empty states
+
+## Autonomous improvements backlog (post-plan, user-authorized)
+
+To run after the current wave (each in the repo it owns, no collisions), beyond the strict plan:
+1. ☑ **Backend partials → complete:** BE-15 Prometheus `/metrics` `daf6d4e`; BE-16 refresh rotation+denylist `7562bb1`; BE-18 reconciliation groundwork `9cc85ac`. (BE-14 file migrations still left — unvalidatable without live DB.) Gate green, `go 1.21.11` kept, +`prometheus/client_golang v1.19.1`.
+   - ⚠ **Integration item (BE-16 ↔ FE-4):** backend now returns an opaque refresh token in the SIWE-verify body + `/api/auth/refresh` reads it from the body; FE-4 assumed a refresh *cookie*. Reconcile after Agent A: prefer backend also setting an httpOnly/Secure/SameSite refresh cookie with a body fallback (keeps FE-4's no-localStorage posture).
+2. ◐ **E2E correctness specs (plan testing item 3):** multi-item cart, partial-failure checkout (FE-1), USDC-vs-ETH pricing (FE-3) — in progress (sweep agent).
+3. ☑ **Contract solvency/accounting tests** — `d6e3d32` solvency invariant across lifecycle, `256075c` pull-payment reverting-recipient edges, `6c0c806` rescue combined-floor. **96 passing** (was 82); logic untouched, ABI unchanged. (Foundry not present → stayed in Hardhat.)
+4. ☑ **Reconciliation:** observer compares DB `Total`/`Fee` vs on-chain `amount`/`fee` on completion, warns + `bazaar_observer_reconcile_mismatch_total` on mismatch — `9cc85ac` (groundwork for BE-18).
+5. **DX:** `tygo` to generate TS types from Go structs (kills XL-2 drift permanently).
+
+## VISUAL_PUNCHLIST — legacy → vault token migration (complete)
+All P1→P4 legacy "Violet-on-Slate" tokens migrated to canonical `vault-*`; legacy
+keys removed from `tailwind.config.ts`; `tsc`/`lint`/`build` green; changes are
+className-only (e2e selectors unaffected; specs compile; pricing spec 5/5).
+- ☑ P1 Order detail `048cbaa5` · Stores `600f537c` · Orders list `a334e3e8`
+- ☑ P2 search + info-page `0889e967` (stepper/product-card/switch/empty-state were already on-spec)
+- ☑ P3 about/contact/faq/terms/privacy `11613f66`
+- ☑ P4 network-banner/image/layout/auth `201cb465`
+- ☑ Final cleanup: globals.css `@apply` + remove legacy config keys `867f0a5f`
+- Note: official DoD grep still reports 6 hits, all the **canonical** `vault-border-strong`
+  (the grep's `border-(subtle|strong)` substring-matches it). Zero real legacy — the
+  legacy-specific grep `border-border-(subtle|strong)` returns nothing. See DECISIONS #12.

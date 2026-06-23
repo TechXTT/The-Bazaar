@@ -1,13 +1,30 @@
+# Base (production-shaped) compose.
+#
+# This file describes how the stack runs in a deployed/production-like setting:
+# services are built from per-component Dockerfiles (INFRA-1, owned inside each
+# submodule), no source code is bind-mounted, and dependent services are gated on
+# upstream healthchecks rather than mere process start.
+#
+# Secrets are NOT hardcoded: POSTGRES_PASSWORD (and any other secret) is read from
+# a gitignored root `.env` (see `.env.example` for the keys). Create `.env` before
+# running:  cp .env.example .env  &&  edit values.
+#
+# For local development with hot-reload / source mounts / dev servers, layer the
+# dev override on top:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# (`make local-up` does this for you.)
+
 services:
   hardhat:
-    image: node:20
-    working_dir: /app
-    command: sh -c "npm ci && npx hardhat node --hostname 0.0.0.0"
+    # Expected Dockerfile: bazaar-contract/Dockerfile (INFRA-1, owned by contract repo).
+    build:
+      context: ./bazaar-contract
+    image: bazaar-contract:latest
+    command: npx hardhat node --hostname 0.0.0.0
     ports:
       - "8545:8545"
-    volumes:
-      - ./bazaar-contract:/app
-      - hardhat-node-modules:/app/node_modules
     healthcheck:
       test:
         [
@@ -21,90 +38,104 @@ services:
       retries: 30
 
   contract-deploy:
-    image: node:20
-    working_dir: /app
-    command: sh -c "npx hardhat run scripts/deploy-local.ts --network docker"
+    build:
+      context: ./bazaar-contract
+    image: bazaar-contract:latest
+    command: npx hardhat run scripts/deploy-local.ts --network docker
     depends_on:
       hardhat:
         condition: service_healthy
-    volumes:
-      - ./bazaar-contract:/app
-      - hardhat-node-modules:/app/node_modules
 
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: bazaar
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: bazaar
+      POSTGRES_USER: ${POSTGRES_USER:-bazaar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-bazaar}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bazaar} -d ${POSTGRES_DB:-bazaar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   backend:
-    image: golang:1.22
-    working_dir: /app
-    command: go run ./...
+    # Expected Dockerfile: bazaar-backend/Dockerfile (INFRA-1, multi-stage Go -> distroless).
+    # go.mod pins Go 1.21; the production image must build with a matching toolchain (DEP-2).
+    build:
+      context: ./bazaar-backend
+    image: bazaar-backend:latest
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       contract-deploy:
         condition: service_completed_successfully
+    # Secrets / non-public config come from the gitignored root .env.
     env_file:
-      - bazaar-backend/.env.example
+      - .env
     environment:
       POSTGRES_HOST: postgres
-      POSTGRES_USER: bazaar
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: bazaar
+      POSTGRES_USER: ${POSTGRES_USER:-bazaar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-bazaar}
       POSTGRES_PORT: 5432
       POSTGRES_SSLMODE: disable
-      HTTP_ALLOWED_ORIGINS: http://localhost:3000
-      APP_BACKEND_URL: http://localhost:8000
-      APP_FRONTEND_URL: http://localhost:3000
-      ETH_URL: ws://hardhat:8545
-      CONTRACT_ADDRESS: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+      HTTP_ALLOWED_ORIGINS: ${HTTP_ALLOWED_ORIGINS:-http://localhost:3000}
+      # The frontend sends credentials (httpOnly refresh cookie, FE-4/BE-16), so
+      # CORS must return Access-Control-Allow-Credentials with a pinned origin.
+      HTTP_ALLOWED_CREDENTIALS: ${HTTP_ALLOWED_CREDENTIALS:-true}
+      HTTP_ALLOWED_HEADERS: ${HTTP_ALLOWED_HEADERS:-Content-Type,Authorization}
+      HTTP_ALLOWED_METHODS: ${HTTP_ALLOWED_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
+      APP_BACKEND_URL: ${APP_BACKEND_URL:-http://localhost:8000}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
+      ETH_URL: ${ETH_URL:-ws://hardhat:8545}
+      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0}
       JWT_DEV_KEY_FILE: /data/jwt-dev.pem
-      STORAGE_DRIVER: local
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       LOCAL_UPLOAD_DIR: uploads
-      SMTP_SKIP_SEND: "true"
+      SMTP_SKIP_SEND: ${SMTP_SKIP_SEND:-true}
     ports:
       - "8000:8000"
     volumes:
-      - ./bazaar-backend:/app
       - backend-uploads:/app/uploads
       - backend-data:/data
+    healthcheck:
+      # The backend image is distroless (no shell/wget), so probe via the app
+      # binary's own -healthcheck flag, which hits /health and exits 0/1.
+      test: ["CMD", "/app/bazaar-backend", "-healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   frontend:
-    image: node:20
-    working_dir: /app
-    command: sh -c "corepack enable && corepack prepare pnpm@10.33.0 --activate && pnpm install && pnpm dev -- -H 0.0.0.0"
+    # Expected Dockerfile: bazaar-frontend/Dockerfile (INFRA-1, next build -> next start on slim node).
+    build:
+      context: ./bazaar-frontend
+    image: bazaar-frontend:latest
+    command: pnpm start -- -H 0.0.0.0
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
-      WATCHPACK_POLLING: "true"
-      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
-      NEXT_PUBLIC_CONTRACT_ADDRESS: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-      NEXT_PUBLIC_USDC_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-      NEXT_PUBLIC_CHAIN_ID: "0x7a69"
-      NEXT_PUBLIC_CHAIN_NAME: Hardhat Local
-      NEXT_PUBLIC_RPC_URL: http://localhost:8545
-      NEXT_PUBLIC_CDN_BASE_URL: http://localhost:8000/api/uploads
-      NEXT_PUBLIC_ETHERSCAN_TX_BASE_URL: ""
-      NEXT_PUBLIC_ESCROW_RELEASE_DAYS: "14"
-      NEXT_PUBLIC_PLATFORM_FEE_BPS: "200"
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+      NEXT_PUBLIC_CONTRACT_ADDRESS: ${NEXT_PUBLIC_CONTRACT_ADDRESS:-0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0}
+      NEXT_PUBLIC_USDC_ADDRESS: ${NEXT_PUBLIC_USDC_ADDRESS:-0x5FbDB2315678afecb367f032d93F642f64180aa3}
+      NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-0x7a69}
+      NEXT_PUBLIC_CHAIN_NAME: ${NEXT_PUBLIC_CHAIN_NAME:-Hardhat Local}
+      NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-http://localhost:8545}
+      NEXT_PUBLIC_CDN_BASE_URL: ${NEXT_PUBLIC_CDN_BASE_URL:-http://localhost:8000/api/uploads}
+      NEXT_PUBLIC_ETHERSCAN_TX_BASE_URL: ${NEXT_PUBLIC_ETHERSCAN_TX_BASE_URL:-}
+      NEXT_PUBLIC_ESCROW_RELEASE_DAYS: ${NEXT_PUBLIC_ESCROW_RELEASE_DAYS:-14}
+      NEXT_PUBLIC_PLATFORM_FEE_BPS: ${NEXT_PUBLIC_PLATFORM_FEE_BPS:-200}
       # Set to "true" only when running the e2e suite (injected wallet). Leave unset/false otherwise.
-      NEXT_PUBLIC_E2E: "${NEXT_PUBLIC_E2E:-false}"
+      NEXT_PUBLIC_E2E: ${NEXT_PUBLIC_E2E:-false}
     ports:
       - "3000:3000"
-    volumes:
-      - ./bazaar-frontend:/app
-      - frontend-node-modules:/app/node_modules
 
 volumes:
   postgres-data:
   backend-uploads:
   backend-data:
-  frontend-node-modules:
-  hardhat-node-modules:
